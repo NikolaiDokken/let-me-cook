@@ -1,13 +1,13 @@
 # Meal Planner
 
-A Raspberry Pi–hosted meal planning app. Every week a planner calls the Claude API to generate a 7-day Norwegian dinner plan and emails it. A companion web app lets you browse the plan, check off shopping items, and follow step-by-step recipes.
+A home server–hosted meal planning app. Every week a planner calls the Claude API to generate a 7-day Norwegian dinner plan and emails it. A companion web app lets you browse the plan, check off shopping items, and follow step-by-step recipes.
 
 ## Stack
 
 - **Planner** — Python + Anthropic SDK, generates the weekly plan and sends it by email
 - **Web app** — Python + Flask, serves the companion UI
 - **Database** — SQLite, stores all weekly plans and meals
-- **Infrastructure** — Docker Compose, runs both services on the Pi
+- **Infrastructure** — Docker Compose, runs both services on the home server
 
 ## Setup
 
@@ -46,7 +46,7 @@ docker compose up web --build
 docker compose run --rm planner
 ```
 
-The web app is available at `http://<pi-ip>:5000` on your local network.
+The web app is available at `http://<server-ip>:5000` on your local network.
 
 ## Web app
 
@@ -62,9 +62,9 @@ The web app is available at `http://<pi-ip>:5000` on your local network.
 
 Shopping list and step progress are saved in the browser (`localStorage`), keyed per week, so state persists across page reloads.
 
-## Scheduling on the Pi
+## Scheduling on the home server
 
-To generate the plan automatically every Monday morning, add a cron job on the Pi:
+To generate the plan automatically every Monday morning, add a cron job on the home server:
 
 ```bash
 crontab -e
