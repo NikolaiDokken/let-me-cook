@@ -9,19 +9,6 @@ A Raspberry Pi–hosted meal planning app. Every week a planner calls the Claude
 - **Database** — SQLite, stores all weekly plans and meals
 - **Infrastructure** — Docker Compose, runs both services on the Pi
 
-## Project structure
-
-```
-meal-planner/
-├── planner/
-├── web/
-│   └── templates/
-├── data/
-├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
-```
-
 ## Setup
 
 **1. Clone and configure**
