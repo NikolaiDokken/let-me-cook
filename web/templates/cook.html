@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+{% block title %}{% if meal %}{{ meal.name }}{% else %}Ikke funnet{% endif %}{% endblock %}
+
+{% block extra_style %}
+<style>
+  .hero {
+    padding: 20px 18px 22px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-day {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .hero-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px;
+    letter-spacing: 1px;
+    line-height: 1.05;
+  }
+  .hero-desc {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .section-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    padding: 18px 18px 10px;
+  }
+
+  .ingredients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 18px 6px;
+  }
+  .pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 15px;
+  }
+
+  .steps {
+    padding: 4px 14px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-height: 72px;
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: background 0.12s;
+  }
+  .step:active { background: var(--surface2); }
+  .step.done {
+    background: #182a20;
+    border-color: #2a4535;
+  }
+
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    color: var(--accent);
+    line-height: 1;
+    width: 28px;
+    flex-shrink: 0;
+    transition: color 0.15s;
+  }
+  .step.done .step-num { color: var(--green); }
+
+  .step-text {
+    font-size: 17px;
+    line-height: 1.55;
+    padding-top: 4px;
+    transition: opacity 0.2s;
+  }
+  .step.done .step-text {
+    opacity: 0.38;
+    text-decoration: line-through;
+    text-decoration-color: var(--green);
+  }
+
+  .footer {
+    padding: 10px 14px 8px;
+    display: flex;
+    gap: 10px;
+  }
+  .restart-btn {
+    flex: 1;
+    height: 58px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Barlow', sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .restart-btn:active { opacity: 0.6; }
+
+  .cookmode-btn {
+    flex: 1;
+    height: 58px;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  .cookmode-btn:active { opacity: 0.75; }
+
+  /* ── Cook Mode Overlay ── */
+  #cookMode {
+    position: fixed;
+    inset: 0;
+    background: #0c0d0b;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+  }
+  #cookMode.hidden { display: none; }
+
+  .cm-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 18px 10px;
+    flex-shrink: 0;
+  }
+
+  .cm-exit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    border: none;
+    color: var(--text-muted);
+    font-size: 22px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .cm-exit:active { background: rgba(255,255,255,0.14); }
+
+  .cm-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    flex: 1;
+    padding: 0 12px;
+  }
+  .cm-dot {
+    height: 6px;
+    width: 6px;
+    border-radius: 3px;
+    background: #333;
+    transition: width 0.25s, background 0.25s;
+    flex-shrink: 0;
+  }
+  .cm-dot.active {
+    width: 22px;
+    background: var(--accent);
+  }
+  .cm-dot.done {
+    background: var(--green);
+  }
+
+  /* Spacer so dots stay centered */
+  .cm-exit-spacer {
+    width: 56px;
+    flex-shrink: 0;
+  }
+
+  /* Main area: text + tap zones */
+  .cm-main {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Invisible tap zones — full height of cm-main */
+  .cm-zones {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    z-index: 1;
+  }
+  .cm-prev-zone, .cm-next-zone {
+    flex: 1;
+    cursor: pointer;
+  }
+
+  /* Content sits on top of zones (pointer-events: none so taps fall through) */
+  .cm-content {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
+    padding: 0 72px;
+    text-align: center;
+  }
+  .cm-step-text {
+    font-size: clamp(22px, 5.5vw, 34px);
+    line-height: 1.65;
+    color: var(--text);
+  }
+
+  /* Side arrow hints */
+  .cm-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 44px;
+    color: rgba(255,255,255,0.12);
+    pointer-events: none;
+    z-index: 3;
+    transition: opacity 0.2s;
+    line-height: 1;
+  }
+  .cm-arrow.hidden { opacity: 0; }
+  .cm-arrow-l { left: 10px; }
+  .cm-arrow-r { right: 10px; }
+
+  /* Bottom counter */
+  .cm-bottom {
+    padding: 14px 18px max(20px, env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .cm-counter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+  }
+
+  /* Completion screen */
+  #cmDone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px 32px;
+  }
+  #cmDone.hidden { display: none; }
+  .cm-done-icon { font-size: 72px; }
+  .cm-done-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+  .cm-done-sub {
+    font-size: 18px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.5;
+  }
+  .cm-done-home {
+    margin-top: 16px;
+    height: 62px;
+    padding: 0 40px;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Tap flash feedback */
+  .cm-flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 190;
+    opacity: 0;
+  }
+  .cm-flash.go { animation: flash 0.18s ease-out forwards; }
+  @keyframes flash {
+    0%   { opacity: 0.08; }
+    100% { opacity: 0; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if not meal %}
+<div class="header">
+  <a href="{{ back_url }}" class="back-btn">‹</a>
+  <div class="header-text">
+    <div class="header-title">Ikke funnet</div>
+  </div>
+</div>
+<div class="empty">
+  <div class="empty-icon">🍳</div>
+  <div class="empty-msg">Ingen rett funnet for denne dagen.</div>
+</div>
+
+{% else %}
+<div class="header">
+  <a href="{{ back_url }}" class="back-btn">‹</a>
+</div>
+
+<div class="hero">
+  <div class="hero-day">{{ meal.day | upper }}</div>
+  <div class="hero-name">{{ meal.name }}</div>
+  {% if meal.description %}
+  <div class="hero-desc">{{ meal.description }}</div>
+  {% endif %}
+</div>
+
+{% if meal.ingredients %}
+<div class="section-label">Ingredienser</div>
+<div class="ingredients">
+  {% for ing in meal.ingredients %}
+  <span class="pill">{{ ing }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="section-label">Fremgangsmåte</div>
+<div class="steps">
+  {% for s in meal.steps %}
+  <div class="step" data-n="{{ loop.index }}" onclick="toggleStep(this)">
+    <div class="step-num">{{ loop.index }}</div>
+    <div class="step-text">{{ s }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="footer">
+  <button class="restart-btn" onclick="restart()">↺ Start på nytt</button>
+  <button class="cookmode-btn" onclick="enterCookMode()">▶ Kokkemodus</button>
+</div>
+
+<!-- Cook Mode Overlay -->
+<div id="cookMode" class="hidden">
+
+  <div class="cm-top">
+    <button class="cm-exit" onclick="exitCookMode()">✕</button>
+    <div class="cm-dots" id="cmDots"></div>
+    <div class="cm-exit-spacer"></div>
+  </div>
+
+  <div class="cm-main" id="cmMain">
+    <div class="cm-zones">
+      <div class="cm-prev-zone" onclick="cmPrev()"></div>
+      <div class="cm-next-zone" onclick="cmNext()"></div>
+    </div>
+    <div class="cm-content">
+      <div class="cm-step-text" id="cmText"></div>
+    </div>
+    <div class="cm-arrow cm-arrow-l hidden" id="cmArrowL">‹</div>
+    <div class="cm-arrow cm-arrow-r" id="cmArrowR">›</div>
+  </div>
+
+  <div class="cm-bottom">
+    <div class="cm-counter" id="cmCounter"></div>
+  </div>
+
+  <!-- Shown after last step -->
+  <div id="cmDone" class="hidden">
+    <div class="cm-done-icon">🎉</div>
+    <div class="cm-done-title">Ferdig!</div>
+    <div class="cm-done-sub">{{ meal.name }}<br>er klar til servering.</div>
+    <a href="/" class="cm-done-home">Tilbake til oversikten</a>
+  </div>
+</div>
+
+<div class="cm-flash" id="cmFlash"></div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if meal %}
+<script>
+  const STEPS   = {{ meal.steps | tojson }};
+  const KEY     = 'cook::{{ week }}::{{ meal.day }}';
+  const TOTAL   = STEPS.length;
+  let   current = 0; // 0-indexed
+
+  /* ── Persistent done state ── */
+  function loadDone() {
+    try { return new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  function saveDone(s) { localStorage.setItem(KEY, JSON.stringify([...s])); }
+
+  function markDone(n) {         // n is 1-indexed
+    const s = loadDone(); s.add(n); saveDone(s);
+    const el = document.querySelector(`.step[data-n="${n}"]`);
+    if (el) el.classList.add('done');
+  }
+  function markUndone(n) {
+    const s = loadDone(); s.delete(n); saveDone(s);
+    const el = document.querySelector(`.step[data-n="${n}"]`);
+    if (el) el.classList.remove('done');
+  }
+
+  /* ── Regular step toggle ── */
+  function toggleStep(el) {
+    const n = parseInt(el.dataset.n);
+    const done = loadDone();
+    if (done.has(n)) { markUndone(n); }
+    else             { markDone(n);   }
+  }
+
+  function restart() {
+    localStorage.removeItem(KEY);
+    document.querySelectorAll('.step.done')
+      .forEach(el => el.classList.remove('done'));
+  }
+
+  /* ── Cook Mode ── */
+  function buildDots() {
+    const wrap = document.getElementById('cmDots');
+    wrap.innerHTML = '';
+    const done = loadDone();
+    for (let i = 1; i <= TOTAL; i++) {
+      const d = document.createElement('div');
+      d.className = 'cm-dot' +
+        (i - 1 === current ? ' active' : done.has(i) ? ' done' : '');
+      wrap.appendChild(d);
+    }
+  }
+
+  function renderStep() {
+    document.getElementById('cmText').textContent = STEPS[current];
+    document.getElementById('cmCounter').textContent =
+      'STEG ' + (current + 1) + ' / ' + TOTAL;
+
+    document.getElementById('cmArrowL').classList.toggle('hidden', current === 0);
+    document.getElementById('cmArrowR').classList.toggle('hidden', false);
+
+    buildDots();
+  }
+
+  function flash() {
+    const el = document.getElementById('cmFlash');
+    el.classList.remove('go');
+    void el.offsetWidth; // reflow
+    el.classList.add('go');
+  }
+
+  function cmNext() {
+    flash();
+    markDone(current + 1); // mark current step done (1-indexed)
+    if (current < TOTAL - 1) {
+      current++;
+      renderStep();
+    } else {
+      // Last step tapped — show completion
+      document.getElementById('cmMain').style.display   = 'none';
+      document.getElementById('cmCounter').style.display = 'none';
+      document.getElementById('cmDone').classList.remove('hidden');
+      buildDots();
+    }
+  }
+
+  function cmPrev() {
+    if (current === 0) return;
+    flash();
+    markUndone(current + 1); // un-mark current step when going back
+    current--;
+    renderStep();
+
+    // Make sure the done screen is hidden if we somehow backed into it
+    document.getElementById('cmDone').classList.add('hidden');
+    document.getElementById('cmMain').style.display   = '';
+    document.getElementById('cmCounter').style.display = '';
+  }
+
+  function enterCookMode() {
+    // Start from first unfinished step, or beginning
+    const done = loadDone();
+    current = 0;
+    for (let i = 0; i < TOTAL; i++) {
+      if (!done.has(i + 1)) { current = i; break; }
+      if (i === TOTAL - 1) current = TOTAL - 1;
+    }
+
+    document.getElementById('cmDone').classList.add('hidden');
+    document.getElementById('cmMain').style.display   = '';
+    document.getElementById('cmCounter').style.display = '';
+    renderStep();
+    document.getElementById('cookMode').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Request fullscreen on mobile if available
+    try { document.documentElement.requestFullscreen?.(); } catch {}
+  }
+
+  function exitCookMode() {
+    document.getElementById('cookMode').classList.add('hidden');
+    document.body.style.overflow = '';
+    try { document.exitFullscreen?.(); } catch {}
+  }
+
+  // Keyboard support for testing on desktop
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('cookMode').classList.contains('hidden')) return;
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); cmNext(); }
+    if (e.key === 'ArrowLeft')                    { e.preventDefault(); cmPrev(); }
+    if (e.key === 'Escape')                        exitCookMode();
+  });
+
+  /* ── Restore done state on page load ── */
+  const initDone = loadDone();
+  document.querySelectorAll('.step').forEach(el => {
+    if (initDone.has(parseInt(el.dataset.n))) el.classList.add('done');
+  });
+</script>
+{% endif %}
+{% endblock %}

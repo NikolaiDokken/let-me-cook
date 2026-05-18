@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#111210">
+  <title>{% block title %}Matplanlegger{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #111210;
+      --surface:      #1c1d1a;
+      --surface2:     #252621;
+      --border:       #2a2b27;
+      --accent:       #E8970A;
+      --accent-text:  #111;
+      --text:         #F0EDE6;
+      --text-muted:   #7a7975;
+      --green:        #3a7d52;
+      --touch:        64px;
+      --radius:       14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      font-size: 18px;
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
+    }
+
+    .page {
+      max-width: 600px;
+      margin: 0 auto;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--touch);
+      height: var(--touch);
+      background: var(--surface2);
+      border-radius: var(--radius);
+      border: none;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 32px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .back-btn:active { opacity: 0.7; }
+
+    .header-text { flex: 1; min-width: 0; }
+    .header-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 34px;
+      letter-spacing: 1.5px;
+      line-height: 1;
+    }
+    .header-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      padding: 80px 24px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .empty-icon { font-size: 56px; margin-bottom: 20px; }
+    .empty-msg  { font-size: 17px; line-height: 1.6; }
+  </style>
+  {% block extra_style %}{% endblock %}
+</head>
+<body>
+<div class="page">
+  {% block content %}{% endblock %}
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

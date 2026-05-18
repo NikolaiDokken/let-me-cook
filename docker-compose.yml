@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data:z        # persists the SQLite database
+      - .:/app:z                  # live code reloading during dev
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  planner:
+    build: .
+    volumes:
+      - ./data:/app/data:z
+      - .:/app:z
+    env_file:
+      - .env
+    command: python planner/generate_plan.py
+    restart: "no"

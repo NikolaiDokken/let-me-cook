@@ -1,0 +1,5 @@
+anthropic
+flask
+python-dotenv
+requests
+beautifulsoup4

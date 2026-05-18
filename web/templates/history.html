@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Tidligere uker{% endblock %}
+
+{% block extra_style %}
+<style>
+  .content { padding: 12px 14px 32px; }
+
+  .week-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 82px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .week-card:active { background: var(--surface2); }
+  .week-card:first-child .week-badge { background: var(--accent); color: var(--accent-text); }
+
+  .week-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    border-radius: 6px;
+    padding: 4px 10px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    align-self: flex-start;
+    margin-top: 2px;
+  }
+
+  .week-info { flex: 1; min-width: 0; }
+  .week-date {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    line-height: 1.1;
+  }
+  .week-preview {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .week-arrow {
+    font-size: 26px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header">
+  <a href="/" class="back-btn">‹</a>
+  <div class="header-text">
+    <div class="header-title">Tidligere uker</div>
+    <div class="header-sub">{{ weeks | length }} uke{{ 'r' if weeks | length != 1 else '' }} lagret</div>
+  </div>
+</div>
+
+{% if not weeks %}
+<div class="empty">
+  <div class="empty-icon">📅</div>
+  <div class="empty-msg">Ingen tidligere uker funnet.</div>
+</div>
+{% else %}
+<div class="content">
+  {% for week in weeks %}
+  <a href="/history/{{ week.week_start }}" class="week-card">
+    <div class="week-badge">{{ 'DENNE UKEN' if loop.first else 'UKE' }}</div>
+    <div class="week-info">
+      <div class="week-date">{{ week.week_start | fmt_date }}</div>
+      <div class="week-preview">{{ week.meals[:3] | join(' · ') }}{% if week.meals | length > 3 %} …{% endif %}</div>
+    </div>
+    <div class="week-arrow">›</div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

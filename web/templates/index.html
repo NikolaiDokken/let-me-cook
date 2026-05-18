@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Matplanlegger{% endblock %}
+
+{% block extra_style %}
+<style>
+  .home-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 28px 18px 20px;
+  }
+
+  .home-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .home-week {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 5px;
+  }
+
+  .shopping-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: var(--touch);
+    padding: 0 22px;
+    background: var(--accent);
+    color: var(--accent-text);
+    border-radius: var(--radius);
+    text-decoration: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 21px;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .shopping-btn:active { opacity: 0.75; }
+
+  .meals-list {
+    padding: 4px 14px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .meal-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 82px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--text);
+  }
+  .meal-card:active { background: var(--surface2); }
+
+  .meal-day {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: var(--accent);
+    width: 88px;
+    flex-shrink: 0;
+    line-height: 1.1;
+  }
+
+  .meal-info { flex: 1; min-width: 0; }
+  .meal-name {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .meal-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .meal-arrow {
+    font-size: 26px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .history-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 4px 14px 28px;
+    height: 58px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: 17px;
+  }
+  .history-link:active { background: var(--surface2); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="home-header">
+  <div>
+    <div class="home-title">Matplan</div>
+    {% if week %}
+    <div class="home-week">Uke fra {{ week }}</div>
+    {% endif %}
+  </div>
+  {% if week %}
+  <a href="/shopping" class="shopping-btn">
+    <span>🛒</span> Handleliste
+  </a>
+  {% endif %}
+</div>
+
+{% if not week %}
+<div class="empty">
+  <div class="empty-icon">🍽</div>
+  <div class="empty-msg">Ingen matplan funnet.<br>Kjør planleggeren for å generere en plan.</div>
+</div>
+{% else %}
+<div class="meals-list">
+  {% for meal in meals %}
+  <a href="/cook/{{ meal.day }}" class="meal-card">
+    <div class="meal-day">{{ meal.day }}</div>
+    <div class="meal-info">
+      <div class="meal-name">{{ meal.name }}</div>
+      {% if meal.description %}
+      <div class="meal-desc">{{ meal.description }}</div>
+      {% endif %}
+    </div>
+    <div class="meal-arrow">›</div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<a href="/history" class="history-link">🕐 Tidligere uker</a>
+{% endblock %}

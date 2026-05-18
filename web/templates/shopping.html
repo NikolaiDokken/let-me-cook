@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Handleliste{% endblock %}
+
+{% block extra_style %}
+<style>
+  .progress-wrap {
+    padding: 12px 18px 4px;
+  }
+  .progress-track {
+    height: 5px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+  .progress-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    text-align: right;
+  }
+
+  .content { padding: 8px 14px 16px; }
+
+  .section-block { margin-bottom: 20px; }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 19px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    padding: 10px 4px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: var(--touch);
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    border-radius: 6px;
+  }
+  .item-row:active { background: var(--surface2); }
+
+  .item-box {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    border: 2px solid #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .item-row.checked .item-box {
+    background: var(--green);
+    border-color: var(--green);
+    font-size: 18px;
+  }
+  .item-box::after { content: '✓'; color: #fff; }
+
+  .item-label {
+    font-size: 18px;
+    line-height: 1.35;
+    flex: 1;
+    transition: opacity 0.2s, text-decoration 0.2s;
+  }
+  .item-row.checked .item-label {
+    opacity: 0.38;
+    text-decoration: line-through;
+    text-decoration-color: var(--green);
+  }
+
+  .footer {
+    padding: 8px 14px 8px;
+    display: flex;
+    gap: 10px;
+  }
+  .reset-btn {
+    flex: 1;
+    height: 58px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: 'Barlow', sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .reset-btn:active { opacity: 0.6; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header">
+  <a href="/" class="back-btn">‹</a>
+  <div class="header-text">
+    <div class="header-title">Handleliste</div>
+    {% if week %}<div class="header-sub">Uke fra {{ week }}</div>{% endif %}
+  </div>
+</div>
+
+{% if not sections %}
+<div class="empty">
+  <div class="empty-icon">🛒</div>
+  <div class="empty-msg">Ingen handleliste funnet.</div>
+</div>
+{% else %}
+
+<div class="progress-wrap">
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">0 av 0 varer</div>
+</div>
+
+<div class="content">
+  {% for section, items in sections.items() %}
+  <div class="section-block">
+    <div class="section-title">{{ section }}</div>
+    {% for item in items %}
+    <div class="item-row"
+         data-key="{{ section }}||{{ item }}"
+         onclick="toggle(this)">
+      <div class="item-box"></div>
+      <div class="item-label">{{ item }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="footer">
+  <button class="reset-btn" onclick="resetAll()">Nullstill alle avhakninger</button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if sections %}
+<script>
+  const STORE_KEY = 'shopping::{{ week }}';
+
+  function load() {
+    try { return new Set(JSON.parse(localStorage.getItem(STORE_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+
+  function save(set) {
+    localStorage.setItem(STORE_KEY, JSON.stringify([...set]));
+  }
+
+  function updateProgress() {
+    const all    = document.querySelectorAll('.item-row');
+    const done   = document.querySelectorAll('.item-row.checked');
+    const pct    = all.length ? (done.length / all.length * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent =
+      done.length + ' av ' + all.length + ' varer';
+  }
+
+  function toggle(el) {
+    const key = el.dataset.key;
+    const checked = load();
+    if (checked.has(key)) { checked.delete(key); el.classList.remove('checked'); }
+    else                   { checked.add(key);    el.classList.add('checked');    }
+    save(checked);
+    updateProgress();
+  }
+
+  function resetAll() {
+    localStorage.removeItem(STORE_KEY);
+    document.querySelectorAll('.item-row.checked')
+      .forEach(el => el.classList.remove('checked'));
+    updateProgress();
+  }
+
+  // Restore on load
+  const saved = load();
+  document.querySelectorAll('.item-row').forEach(el => {
+    if (saved.has(el.dataset.key)) el.classList.add('checked');
+  });
+  updateProgress();
+</script>
+{% endif %}
+{% endblock %}
