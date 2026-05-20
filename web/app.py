@@ -46,6 +46,18 @@ def get_db():
     return con
 
 
+def migrate_db():
+    con = sqlite3.connect(DB_PATH)
+    try:
+        con.execute("ALTER TABLE meals ADD COLUMN nutrition TEXT")
+        con.commit()
+    except sqlite3.OperationalError:
+        pass
+    con.close()
+
+migrate_db()
+
+
 def get_current_week():
     con = get_db()
     week = con.execute(
@@ -108,6 +120,7 @@ def cook(day):
         "description": meal["description"],
         "ingredients": normalize_ingredients(json.loads(meal["ingredients"])),
         "steps": json.loads(meal["steps"]),
+        "nutrition": json.loads(meal["nutrition"]) if meal["nutrition"] else None,
     }
     return render_template("cook.html", meal=meal_data, week=week["week_start"], back_url="/", base_people=plan.get("base_people"))
 
@@ -135,6 +148,7 @@ def history_cook(week_start, day):
         "description": meal["description"],
         "ingredients": normalize_ingredients(json.loads(meal["ingredients"])),
         "steps": json.loads(meal["steps"]),
+        "nutrition": json.loads(meal["nutrition"]) if meal["nutrition"] else None,
     }
     return render_template("cook.html", meal=meal_data, week=week_start, back_url=f"/history/{week_start}", base_people=plan.get("base_people"))
 

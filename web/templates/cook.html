@@ -14,6 +14,31 @@
     line-height: 1.5;
   }
 
+  .nutrition-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .nut-item {
+    flex: 1;
+    padding: 12px 4px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .nut-item:last-child { border-right: none; }
+  .nut-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  .nut-lbl {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+
   .section-label {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 20px;
@@ -373,6 +398,30 @@
 {% if meal.description %}
 <div class="desc-wrap">
   <div class="hero-desc">{{ meal.description }}</div>
+</div>
+{% endif %}
+
+{% if meal.nutrition %}
+<div class="nutrition-bar">
+  <div class="nut-item">
+    <div class="nut-val">{{ meal.nutrition.calories }}</div>
+    <div class="nut-lbl">kcal</div>
+  </div>
+  <div class="nut-item">
+    <div class="nut-val">{{ meal.nutrition.protein_g }}g</div>
+    <div class="nut-lbl">protein</div>
+  </div>
+  <div class="nut-item">
+    <div class="nut-val">{{ meal.nutrition.carbs_g }}g</div>
+    <div class="nut-lbl">karbo</div>
+  </div>
+  <div class="nut-item">
+    <div class="nut-val">{{ meal.nutrition.fat_g }}g</div>
+    <div class="nut-lbl">fett</div>
+  </div>
+</div>
+<div style="padding: 5px 18px 6px; font-size: 11px; color: var(--text-muted); border-bottom: 1px solid var(--border);">
+  Estimert næringsinnhold per porsjon
 </div>
 {% endif %}
 

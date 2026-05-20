@@ -97,9 +97,14 @@ def init_db():
             name         TEXT NOT NULL,
             description  TEXT,
             ingredients  TEXT,   -- JSON list
-            steps        TEXT    -- JSON list
+            steps        TEXT,   -- JSON list
+            nutrition    TEXT    -- JSON object
         )
     """)
+    try:
+        con.execute("ALTER TABLE meals ADD COLUMN nutrition TEXT")
+    except sqlite3.OperationalError:
+        pass
     con.commit()
     con.close()
     log.info("Database ready at %s", DB_PATH)
@@ -120,15 +125,16 @@ def save_plan(week_start: str, plan: dict) -> int:
     week_id = cur.lastrowid
     for meal in plan["meals"]:
         con.execute(
-            """INSERT INTO meals (week_id, day, name, description, ingredients, steps)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO meals (week_id, day, name, description, ingredients, steps, nutrition)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 week_id,
                 meal["day"],
                 meal["name"],
                 meal.get("description", ""),
                 json.dumps(meal.get("ingredients", [])),
-                json.dumps(meal.get("steps", []))
+                json.dumps(meal.get("steps", [])),
+                json.dumps(meal["nutrition"]) if meal.get("nutrition") else None
             )
         )
     con.commit()
@@ -171,8 +177,9 @@ Regler:
 - amount er null for ingredienser uten fast mengde (salt, pepper, vann etter smak); unit er null for ingredienser som telles i hele enheter (løk, egg, fedd hvitløk)
 - Konsolider like ingredienser i handlelisten
 - Grupper handlelisten etter butikkavdeling på norsk
-- Velg retter som kan gjenbruke ingredienser fra tidligere i uken for å unngå matsvinn
+- Velg retter som deler ingredienser for å unngå matsvinn, men hver rett må fungere selvstendig — ingen rett skal kreve rester eller forhåndstilberedt mat fra en annen dag, slik at rekkefølgen fritt kan endres
 - Velg sunne og rimelige middagsretter
+- Estimer næringsinnhold per porsjon (per person): kalorier (kcal), protein (g), karbohydrater (g) og fett (g)
 
 JSON-strukturen må følge dette nøyaktig:
 {{
@@ -186,7 +193,8 @@ JSON-strukturen må følge dette nøyaktig:
         {{"amount": 1, "unit": null, "name": "løk"}},
         {{"amount": null, "unit": null, "name": "salt og pepper"}}
       ],
-      "steps": ["Steg 1 tekst", "Steg 2 tekst", "..."]
+      "steps": ["Steg 1 tekst", "Steg 2 tekst", "..."],
+      "nutrition": {{"calories": 650, "protein_g": 35, "carbs_g": 75, "fat_g": 22}}
     }}
   ],
   "shopping_list": {{
@@ -215,7 +223,7 @@ def generate_meal_plan(prefs: dict) -> dict:
 
     message = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=4096,
+        max_tokens=8192,
         system=build_system_prompt(prefs),
         messages=[
             {
@@ -226,8 +234,6 @@ def generate_meal_plan(prefs: dict) -> dict:
     )
 
     raw = message.content[0].text.strip()
-
-    # Claude sometimes wraps the response in markdown fences despite being told not to
     if raw.startswith("```"):
         raw = re.sub(r'^```(?:json)?\s*\n?', '', raw)
         raw = re.sub(r'\n?```\s*$', '', raw)
