@@ -3,28 +3,14 @@
 
 {% block extra_style %}
 <style>
-  .hero {
-    padding: 20px 18px 22px;
+  .desc-wrap {
+    padding: 14px 18px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-  }
-  .hero-day {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 16px;
-    letter-spacing: 3px;
-    color: var(--accent);
-    margin-bottom: 4px;
-  }
-  .hero-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 40px;
-    letter-spacing: 1px;
-    line-height: 1.05;
   }
   .hero-desc {
     font-size: 15px;
     color: var(--text-muted);
-    margin-top: 8px;
     line-height: 1.5;
   }
 
@@ -34,6 +20,47 @@
     letter-spacing: 2px;
     color: var(--accent);
     padding: 18px 18px 10px;
+  }
+
+  .ing-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 18px;
+  }
+
+  .people-stepper {
+    display: flex;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .stepper-btn {
+    width: 44px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 20px;
+    cursor: pointer;
+    font-family: 'Barlow', sans-serif;
+    line-height: 1;
+  }
+  .stepper-btn:active { background: var(--surface); }
+  .people-num {
+    min-width: 28px;
+    text-align: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .people-unit {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding-right: 10px;
   }
 
   .ingredients {
@@ -337,21 +364,33 @@
 {% else %}
 <div class="header">
   <a href="{{ back_url }}" class="back-btn">‹</a>
+  <div class="header-text">
+    <div class="header-sub">{{ meal.day | upper }}</div>
+    <div class="header-title">{{ meal.name }}</div>
+  </div>
 </div>
 
-<div class="hero">
-  <div class="hero-day">{{ meal.day | upper }}</div>
-  <div class="hero-name">{{ meal.name }}</div>
-  {% if meal.description %}
+{% if meal.description %}
+<div class="desc-wrap">
   <div class="hero-desc">{{ meal.description }}</div>
-  {% endif %}
 </div>
+{% endif %}
 
 {% if meal.ingredients %}
-<div class="section-label">Ingredienser</div>
+<div class="ing-header">
+  <div class="section-label">Ingredienser</div>
+  {% if base_people %}
+  <div class="people-stepper">
+    <button class="stepper-btn" onclick="changePeople(-1)">−</button>
+    <span id="peopleCount" class="people-num">{{ base_people }}</span>
+    <span class="people-unit">pers.</span>
+    <button class="stepper-btn" onclick="changePeople(1)">+</button>
+  </div>
+  {% endif %}
+</div>
 <div class="ingredients">
   {% for ing in meal.ingredients %}
-  <span class="pill">{{ ing }}</span>
+  <span class="pill" data-idx="{{ loop.index0 }}">{{ ing | fmt_ing }}</span>
   {% endfor %}
 </div>
 {% endif %}
@@ -412,8 +451,49 @@
 {% block scripts %}
 {% if meal %}
 <script>
-  const STEPS   = {{ meal.steps | tojson }};
-  const KEY     = 'cook::{{ week }}::{{ meal.day }}';
+  const STEPS        = {{ meal.steps | tojson }};
+  const INGREDIENTS  = {{ meal.ingredients | tojson }};
+  const BASE_PEOPLE  = {{ base_people | tojson }};
+  const KEY          = 'cook::{{ week }}::{{ meal.day }}';
+  const PEOPLE_KEY   = 'people::{{ week }}';
+
+  /* ── People picker ── */
+  let selectedPeople = BASE_PEOPLE;
+
+  function formatAmount(n) {
+    const r = Math.round(n * 10) / 10;
+    if (r % 1 === 0) return String(Math.round(r));
+    return r.toFixed(1).replace('.', ',');
+  }
+
+  function formatIngredient(ing, people) {
+    if (ing.amount === null || BASE_PEOPLE === null) return ing.name;
+    const scaled = ing.amount * people / BASE_PEOPLE;
+    const amt = formatAmount(scaled);
+    return ing.unit ? `${amt}${ing.unit} ${ing.name}` : `${amt} ${ing.name}`;
+  }
+
+  function renderIngredients() {
+    document.querySelectorAll('.pill[data-idx]').forEach(el => {
+      el.textContent = formatIngredient(INGREDIENTS[parseInt(el.dataset.idx)], selectedPeople);
+    });
+  }
+
+  function changePeople(delta) {
+    selectedPeople = Math.max(1, Math.min(20, selectedPeople + delta));
+    document.getElementById('peopleCount').textContent = selectedPeople;
+    localStorage.setItem(PEOPLE_KEY, selectedPeople);
+    renderIngredients();
+  }
+
+  if (BASE_PEOPLE !== null) {
+    const saved = parseInt(localStorage.getItem(PEOPLE_KEY));
+    if (saved && !isNaN(saved)) {
+      selectedPeople = saved;
+      document.getElementById('peopleCount').textContent = saved;
+      renderIngredients();
+    }
+  }
   const TOTAL   = STEPS.length;
   let   current = 0; // 0-indexed
 

@@ -167,6 +167,8 @@ Regler:
 - Maks 45 minutter tilberedningstid på hverdager
 - Tilpass porsjoner for {prefs['people']} personer
 - Bruk norske produktnavn og mål (g, kg, dl, ss, ts)
+- Ingredienser bruker strukturert format: {{"amount": tall|null, "unit": enhet|null, "name": navn}}
+- amount er null for ingredienser uten fast mengde (salt, pepper, vann etter smak); unit er null for ingredienser som telles i hele enheter (løk, egg, fedd hvitløk)
 - Konsolider like ingredienser i handlelisten
 - Grupper handlelisten etter butikkavdeling på norsk
 - Velg retter som kan gjenbruke ingredienser fra tidligere i uken for å unngå matsvinn
@@ -179,15 +181,29 @@ JSON-strukturen må følge dette nøyaktig:
       "day": "Mandag",
       "name": "Navn på rett",
       "description": "Én setning beskrivelse",
-      "ingredients": ["400g kyllingfilet", "1 løk", "..."],
+      "ingredients": [
+        {{"amount": 400, "unit": "g", "name": "kyllingfilet"}},
+        {{"amount": 1, "unit": null, "name": "løk"}},
+        {{"amount": null, "unit": null, "name": "salt og pepper"}}
+      ],
       "steps": ["Steg 1 tekst", "Steg 2 tekst", "..."]
     }}
   ],
   "shopping_list": {{
-    "Frukt og grønt": ["1 løk", "2 fedd hvitløk"],
-    "Kjøtt og fisk": ["400g kyllingfilet"],
-    "Meieri": ["1 dl fløte"],
-    "Tørrvarer": ["1 boks hakkede tomater", "olivenolje"]
+    "Frukt og grønt": [
+      {{"amount": 1, "unit": null, "name": "løk"}},
+      {{"amount": 2, "unit": null, "name": "fedd hvitløk"}}
+    ],
+    "Kjøtt og fisk": [
+      {{"amount": 400, "unit": "g", "name": "kyllingfilet"}}
+    ],
+    "Meieri": [
+      {{"amount": 1, "unit": "dl", "name": "fløte"}}
+    ],
+    "Tørrvarer": [
+      {{"amount": 1, "unit": "boks", "name": "hakkede tomater"}},
+      {{"amount": null, "unit": null, "name": "olivenolje"}}
+    ]
   }}
 }}"""
 
@@ -305,6 +321,7 @@ def run_weekly_job():
 
     try:
         plan = generate_meal_plan(prefs)
+        plan["base_people"] = prefs["people"]
         save_plan(week_start, plan)
         send_email(plan, week_start)
         log.info("Weekly job completed successfully")

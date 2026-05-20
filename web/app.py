@@ -18,7 +18,26 @@ def fmt_date(date_str):
     d = datetime.strptime(date_str, "%Y-%m-%d")
     return f"{d.day}. {_MONTHS_NO[d.month - 1]} {d.year}"
 
+def fmt_ing(ing):
+    if ing.get('amount') is None:
+        return ing['name']
+    amt = ing['amount']
+    amt_str = str(int(amt)) if amt == int(amt) else f"{float(amt):.1f}"
+    if ing.get('unit'):
+        return f"{amt_str}{ing['unit']} {ing['name']}"
+    return f"{amt_str} {ing['name']}"
+
+def normalize_ingredients(lst):
+    result = []
+    for ing in lst:
+        if isinstance(ing, str):
+            result.append({"amount": None, "unit": None, "name": ing})
+        else:
+            result.append(ing)
+    return result
+
 app.jinja_env.filters['fmt_date'] = fmt_date
+app.jinja_env.filters['fmt_ing'] = fmt_ing
 
 
 def get_db():
@@ -67,28 +86,30 @@ def shopping():
     ).fetchone()
     con.close()
     if not week:
-        return render_template("shopping.html", week=None, sections={})
+        return render_template("shopping.html", week=None, sections={}, base_people=None)
     plan = json.loads(week["raw_json"])
-    sections = plan.get("shopping_list", {})
-    return render_template("shopping.html", week=week["week_start"], sections=sections)
+    sections = {k: normalize_ingredients(v) for k, v in plan.get("shopping_list", {}).items()}
+    base_people = plan.get("base_people")
+    return render_template("shopping.html", week=week["week_start"], sections=sections, base_people=base_people)
 
 
 @app.route("/cook/<day>")
 def cook(day):
     week, meals = get_current_week()
     if not week:
-        return render_template("cook.html", meal=None, week=None, back_url="/")
+        return render_template("cook.html", meal=None, week=None, back_url="/", base_people=None)
     meal = next((m for m in meals if m["day"].lower() == day.lower()), None)
     if not meal:
-        return render_template("cook.html", meal=None, week=None, back_url="/")
+        return render_template("cook.html", meal=None, week=None, back_url="/", base_people=None)
+    plan = json.loads(week["raw_json"])
     meal_data = {
         "day": meal["day"],
         "name": meal["name"],
         "description": meal["description"],
-        "ingredients": json.loads(meal["ingredients"]),
+        "ingredients": normalize_ingredients(json.loads(meal["ingredients"])),
         "steps": json.loads(meal["steps"]),
     }
-    return render_template("cook.html", meal=meal_data, week=week["week_start"], back_url="/")
+    return render_template("cook.html", meal=meal_data, week=week["week_start"], back_url="/", base_people=plan.get("base_people"))
 
 
 @app.route("/history/<week_start>/cook/<day>")
@@ -99,22 +120,23 @@ def history_cook(week_start, day):
     ).fetchone()
     if not week:
         con.close()
-        return render_template("cook.html", meal=None, week=None, back_url=f"/history/{week_start}")
+        return render_template("cook.html", meal=None, week=None, back_url=f"/history/{week_start}", base_people=None)
     meal = con.execute(
         "SELECT * FROM meals WHERE week_id = ? AND lower(day) = lower(?)",
         (week["id"], day)
     ).fetchone()
     con.close()
     if not meal:
-        return render_template("cook.html", meal=None, week=None, back_url=f"/history/{week_start}")
+        return render_template("cook.html", meal=None, week=None, back_url=f"/history/{week_start}", base_people=None)
+    plan = json.loads(week["raw_json"])
     meal_data = {
         "day": meal["day"],
         "name": meal["name"],
         "description": meal["description"],
-        "ingredients": json.loads(meal["ingredients"]),
+        "ingredients": normalize_ingredients(json.loads(meal["ingredients"])),
         "steps": json.loads(meal["steps"]),
     }
-    return render_template("cook.html", meal=meal_data, week=week_start, back_url=f"/history/{week_start}")
+    return render_template("cook.html", meal=meal_data, week=week_start, back_url=f"/history/{week_start}", base_people=plan.get("base_people"))
 
 
 @app.route("/history")

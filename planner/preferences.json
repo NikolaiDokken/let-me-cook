@@ -1,0 +1,27 @@
+{
+  "language": "norwegian",
+  "location": "Norway",
+  "stores": ["Rema 1000", "Kiwi"],
+  "people": 2,
+
+  "liked_dishes": [
+    "Pastaretter",
+    "Taco",
+    "Kylling tikka masala",
+    "Laksepasta",
+    "Poke bowl",
+    "Kyllinggryte",
+    "One-pot pasta med philadelphia, ajvar og parmesan",
+    "Lasagne",
+    "Wok med nudler",
+    "Kjøttbowl med søtpotet, cottage cheese, chilli mayo og spicy honning"
+  ],
+
+  "disliked_dishes": [
+    "Lever",
+    "Torsk",
+    "Supper"
+  ],
+
+  "dietary_notes": ""
+}
