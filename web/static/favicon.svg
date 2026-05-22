@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#111210"/>
+
+  <!-- Fork: 3 tines, connector bar, handle -->
+  <rect x="5.5"  y="4.5" width="1.4" height="8"    rx="0.7" fill="#E8970A"/>
+  <rect x="8.3"  y="4.5" width="1.4" height="8"    rx="0.7" fill="#E8970A"/>
+  <rect x="11.1" y="4.5" width="1.4" height="8"    rx="0.7" fill="#E8970A"/>
+  <rect x="5.5"  y="11"  width="7"   height="1.5"           fill="#E8970A"/>
+  <rect x="8.3"  y="12.5" width="1.4" height="15"  rx="0.7" fill="#E8970A"/>
+
+  <!-- Knife: tapered blade, bolster, handle -->
+  <path d="M19 4.5 L21 4.5 Q24.5 5.5 24.5 12 L24.5 15.5 L19 15.5 Z" fill="#E8970A"/>
+  <rect x="18.5" y="15.5" width="6"  height="1.5"  rx="0.5" fill="#E8970A"/>
+  <rect x="19.5" y="17"   width="4"  height="10.5" rx="2"   fill="#E8970A"/>
+</svg>
