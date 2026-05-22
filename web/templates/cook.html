@@ -357,6 +357,57 @@
     align-items: center;
   }
 
+  /* Wake lock toggle */
+  .steps-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 18px;
+  }
+  .wake-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .wake-toggle-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .wake-switch {
+    position: relative;
+    width: 42px;
+    height: 25px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .wake-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 19px;
+    height: 19px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .wake-switch.active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .wake-switch.active::after {
+    transform: translateX(17px);
+    background: var(--accent-text);
+  }
+
   /* Tap flash feedback */
   .cm-flash {
     position: fixed;
@@ -393,6 +444,7 @@
     <div class="header-sub">{{ meal.day | upper }}</div>
     <div class="header-title">{{ meal.name }}</div>
   </div>
+
 </div>
 
 {% if meal.description %}
@@ -444,7 +496,13 @@
 </div>
 {% endif %}
 
-<div class="section-label">Fremgangsmåte</div>
+<div class="steps-header">
+  <div class="section-label">Fremgangsmåte</div>
+  <div class="wake-toggle" id="wakeToggle" onclick="toggleWakeLock()" style="display:none">
+    <span class="wake-toggle-label">Hold skjerm på</span>
+    <div class="wake-switch" id="wakeSwitch"></div>
+  </div>
+</div>
 <div class="steps">
   {% for s in meal.steps %}
   <div class="step" data-n="{{ loop.index }}" onclick="toggleStep(this)">
@@ -578,6 +636,54 @@
       .forEach(el => el.classList.remove('done'));
   }
 
+  /* ── Wake Lock ── */
+  let wakeLock = null;
+  let manualWakeLock = false;
+
+  function updateWakeBtn() {
+    const sw = document.getElementById('wakeSwitch');
+    if (!sw) return;
+    sw.classList.toggle('active', wakeLock !== null);
+  }
+
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator) || wakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; updateWakeBtn(); });
+      updateWakeBtn();
+    } catch (_) {}
+  }
+
+  async function releaseWakeLock() {
+    if (wakeLock) { await wakeLock.release(); wakeLock = null; }
+    updateWakeBtn();
+  }
+
+  async function toggleWakeLock() {
+    if (manualWakeLock) {
+      manualWakeLock = false;
+      const inCookMode = !document.getElementById('cookMode').classList.contains('hidden');
+      if (!inCookMode) await releaseWakeLock();
+    } else {
+      manualWakeLock = true;
+      await requestWakeLock();
+    }
+    updateWakeBtn();
+  }
+
+  // Re-acquire after tab switch (browser releases wake lock on visibility loss)
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible') return;
+    const inCookMode = !document.getElementById('cookMode').classList.contains('hidden');
+    if (manualWakeLock || inCookMode) await requestWakeLock();
+  });
+
+  // Only show toggle if API is supported
+  if ('wakeLock' in navigator) {
+    document.getElementById('wakeToggle').style.display = '';
+  }
+
   /* ── Cook Mode ── */
   function buildDots() {
     const wrap = document.getElementById('cmDots');
@@ -655,12 +761,14 @@
 
     // Request fullscreen on mobile if available
     try { document.documentElement.requestFullscreen?.(); } catch {}
+    requestWakeLock();
   }
 
   function exitCookMode() {
     document.getElementById('cookMode').classList.add('hidden');
     document.body.style.overflow = '';
     try { document.exitFullscreen?.(); } catch {}
+    if (!manualWakeLock) releaseWakeLock();
   }
 
   // Keyboard support for testing on desktop
