@@ -149,6 +149,34 @@
     color: var(--text-muted);
     padding-right: 10px;
   }
+
+  .day-filter-bar {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .day-btn {
+    flex: 1;
+    min-width: 42px;
+    height: 36px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .day-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .day-btn:active { opacity: 0.7; }
 </style>
 {% endblock %}
 
@@ -176,6 +204,14 @@
 </div>
 {% endif %}
 
+{% if days %}
+<div class="day-filter-bar">
+  {% for day in days %}
+  <button class="day-btn active" data-day="{{ day }}" onclick="toggleDay(this)">{{ day[:3] }}</button>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% if not sections %}
 <div class="empty">
   <div class="empty-icon">🛒</div>
@@ -197,12 +233,13 @@
     {% for item in items %}
     <div class="item-row"
          data-key="{{ section }}||{{ item.name }}"
-         data-amount="{{ item.amount or '' }}"
-         data-unit="{{ item.unit or '' }}"
+         data-days='{{ item.get("days") | tojson }}'
+         data-amount="{{ item.get('amount', '') or '' }}"
+         data-unit="{{ item.get('unit') or '' }}"
          data-name="{{ item.name }}"
          onclick="toggle(this)">
       <div class="item-box"></div>
-      <div class="item-label">{{ item | fmt_ing }}</div>
+      <div class="item-label">{{ item | fmt_shopping_ing }}</div>
     </div>
     {% endfor %}
   </div>
@@ -221,7 +258,11 @@
   const STORE_KEY   = 'shopping::{{ week }}';
   const BASE_PEOPLE = {{ base_people | tojson }};
   const PEOPLE_KEY  = 'people::{{ week }}';
+  const DAYS_KEY    = 'days::{{ week }}';
+  const ALL_DAYS    = {{ days | tojson }};
+
   let selectedPeople = BASE_PEOPLE;
+  let selectedDays   = new Set(ALL_DAYS);
 
   function formatAmount(n) {
     const r = Math.round(n * 10) / 10;
@@ -229,15 +270,60 @@
     return r.toFixed(1).replace('.', ',');
   }
 
+  // Returns the base amount for an item given the current selectedDays.
+  // Returns null for uncountable (show without amount), -1 to hide the item entirely.
+  function computeBaseAmount(el) {
+    const daysAttr = el.dataset.days;
+    let daysData = null;
+    try { daysData = daysAttr && daysAttr !== 'null' ? JSON.parse(daysAttr) : null; } catch {}
+
+    if (daysData && typeof daysData === 'object') {
+      let total = 0, hasNull = false, hasAny = false;
+      for (const [day, amt] of Object.entries(daysData)) {
+        if (selectedDays.has(day)) {
+          hasAny = true;
+          if (amt === null) hasNull = true;
+          else total += amt;
+        }
+      }
+      if (!hasAny) return -1;
+      if (hasNull && total === 0) return null;
+      return total;
+    }
+
+    // Legacy format (no days data): always show, use raw amount
+    const raw = el.dataset.amount;
+    return raw ? parseFloat(raw) : null;
+  }
+
   function renderItems() {
-    document.querySelectorAll('.item-row[data-amount]').forEach(el => {
-      const rawAmt = el.dataset.amount;
-      const unit   = el.dataset.unit;
-      const name   = el.dataset.name;
-      if (!rawAmt || BASE_PEOPLE === null) return;
-      const scaled = parseFloat(rawAmt) * selectedPeople / BASE_PEOPLE;
-      const amt    = formatAmount(scaled);
-      el.querySelector('.item-label').textContent = unit ? `${amt}${unit} ${name}` : `${amt} ${name}`;
+    document.querySelectorAll('.item-row').forEach(el => {
+      const baseAmt = computeBaseAmount(el);
+      if (baseAmt === -1) {
+        el.style.display = 'none';
+        return;
+      }
+      el.style.display = '';
+      const label = el.querySelector('.item-label');
+      const unit  = el.dataset.unit;
+      const name  = el.dataset.name;
+      if (baseAmt === null) {
+        label.textContent = name;
+      } else {
+        const scaled = BASE_PEOPLE ? baseAmt * selectedPeople / BASE_PEOPLE : baseAmt;
+        const amt    = formatAmount(scaled);
+        label.textContent = unit ? `${amt}${unit} ${name}` : `${amt} ${name}`;
+      }
+    });
+    updateSectionVisibility();
+    updateProgress();
+  }
+
+  function updateSectionVisibility() {
+    document.querySelectorAll('.section-block').forEach(section => {
+      const anyVisible = [...section.querySelectorAll('.item-row')]
+        .some(el => el.style.display !== 'none');
+      section.style.display = anyVisible ? '' : 'none';
     });
   }
 
@@ -254,14 +340,18 @@
     updateNotice();
   }
 
-  if (BASE_PEOPLE !== null) {
-    const saved = parseInt(localStorage.getItem(PEOPLE_KEY));
-    if (saved && !isNaN(saved)) {
-      selectedPeople = saved;
-      document.getElementById('peopleCount').textContent = saved;
-      renderItems();
+  function toggleDay(btn) {
+    const day = btn.dataset.day;
+    if (selectedDays.has(day)) {
+      if (selectedDays.size === 1) return; // keep at least one day selected
+      selectedDays.delete(day);
+      btn.classList.remove('active');
+    } else {
+      selectedDays.add(day);
+      btn.classList.add('active');
     }
-    updateNotice();
+    localStorage.setItem(DAYS_KEY, JSON.stringify([...selectedDays]));
+    renderItems();
   }
 
   function load() {
@@ -274,16 +364,16 @@
   }
 
   function updateProgress() {
-    const all    = document.querySelectorAll('.item-row');
-    const done   = document.querySelectorAll('.item-row.checked');
-    const pct    = all.length ? (done.length / all.length * 100) : 0;
+    const all  = [...document.querySelectorAll('.item-row')].filter(el => el.style.display !== 'none');
+    const done = all.filter(el => el.classList.contains('checked'));
+    const pct  = all.length ? (done.length / all.length * 100) : 0;
     document.getElementById('progressFill').style.width = pct + '%';
     document.getElementById('progressLabel').textContent =
       done.length + ' av ' + all.length + ' varer';
   }
 
   function toggle(el) {
-    const key = el.dataset.key;
+    const key     = el.dataset.key;
     const checked = load();
     if (checked.has(key)) { checked.delete(key); el.classList.remove('checked'); }
     else                   { checked.add(key);    el.classList.add('checked');    }
@@ -298,12 +388,36 @@
     updateProgress();
   }
 
-  // Restore on load
-  const saved = load();
+  // Restore people count
+  if (BASE_PEOPLE !== null) {
+    const savedPeople = parseInt(localStorage.getItem(PEOPLE_KEY));
+    if (savedPeople && !isNaN(savedPeople)) {
+      selectedPeople = savedPeople;
+      document.getElementById('peopleCount').textContent = savedPeople;
+    }
+    updateNotice();
+  }
+
+  // Restore selected days
+  const savedDays = localStorage.getItem(DAYS_KEY);
+  if (savedDays) {
+    try {
+      const parsed = JSON.parse(savedDays).filter(d => ALL_DAYS.includes(d));
+      if (parsed.length) {
+        selectedDays = new Set(parsed);
+        document.querySelectorAll('.day-btn').forEach(btn => {
+          btn.classList.toggle('active', selectedDays.has(btn.dataset.day));
+        });
+      }
+    } catch {}
+  }
+
+  // Restore checked items and initial render
+  const savedChecked = load();
   document.querySelectorAll('.item-row').forEach(el => {
-    if (saved.has(el.dataset.key)) el.classList.add('checked');
+    if (savedChecked.has(el.dataset.key)) el.classList.add('checked');
   });
-  updateProgress();
+  renderItems();
 </script>
 {% endif %}
 {% endblock %}

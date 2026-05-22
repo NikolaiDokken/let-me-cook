@@ -62,6 +62,12 @@
     color: var(--text);
   }
   .meal-card:active { background: var(--surface2); }
+  .meal-card.skipped {
+    opacity: 0.38;
+  }
+  .meal-card.skipped .meal-day {
+    color: var(--text-muted);
+  }
 
   .meal-day {
     font-family: 'Bebas Neue', sans-serif;
@@ -135,7 +141,7 @@
 {% else %}
 <div class="meals-list">
   {% for meal in meals %}
-  <a href="/cook/{{ meal.day }}" class="meal-card">
+  <a href="/cook/{{ meal.day }}" class="meal-card" data-day="{{ meal.day }}">
     <div class="meal-day">{{ meal.day }}</div>
     <div class="meal-info">
       <div class="meal-name">{{ meal.name }}</div>
@@ -150,4 +156,20 @@
 {% endif %}
 
 <a href="/history" class="history-link">🕐 Tidligere uker</a>
+{% endblock %}
+
+{% block scripts %}
+{% if week %}
+<script>
+  const savedDays = localStorage.getItem('days::{{ week }}');
+  if (savedDays) {
+    try {
+      const selected = new Set(JSON.parse(savedDays));
+      document.querySelectorAll('.meal-card[data-day]').forEach(card => {
+        if (!selected.has(card.dataset.day)) card.classList.add('skipped');
+      });
+    } catch {}
+  }
+</script>
+{% endif %}
 {% endblock %}

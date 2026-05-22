@@ -175,8 +175,10 @@ Regler:
 - Bruk norske produktnavn og mål (g, kg, dl, ss, ts)
 - Ingredienser bruker strukturert format: {{"amount": tall|null, "unit": enhet|null, "name": navn}}
 - amount er null for ingredienser uten fast mengde (salt, pepper, vann etter smak); unit er null for ingredienser som telles i hele enheter (løk, egg, fedd hvitløk)
-- Konsolider like ingredienser i handlelisten
 - Grupper handlelisten etter butikkavdeling på norsk
+- For hver vare i handlelisten, bruk et "days"-objekt som viser hvor mye som trengs per dag. Eksempel: {{"Mandag": 1, "Onsdag": 2}}. Ta kun med dagene som bruker ingrediensen.
+- For ingredienser uten fast mengde (salt, pepper, olje), bruk null som verdi for hver dag. Eksempel: {{"Mandag": null, "Tirsdag": null}}
+- Hvis samme ingrediens brukes flere dager, lag én post med alle dagene samlet — ikke én post per dag
 - Velg retter som deler ingredienser for å unngå matsvinn, men hver rett må fungere selvstendig — ingen rett skal kreve rester eller forhåndstilberedt mat fra en annen dag, slik at rekkefølgen fritt kan endres
 - Velg sunne og rimelige middagsretter
 - Estimer næringsinnhold per porsjon (per person): kalorier (kcal), protein (g), karbohydrater (g) og fett (g)
@@ -199,18 +201,18 @@ JSON-strukturen må følge dette nøyaktig:
   ],
   "shopping_list": {{
     "Frukt og grønt": [
-      {{"amount": 1, "unit": null, "name": "løk"}},
-      {{"amount": 2, "unit": null, "name": "fedd hvitløk"}}
+      {{"name": "løk", "unit": null, "days": {{"Mandag": 1, "Onsdag": 1, "Lørdag": 2}}}},
+      {{"name": "fedd hvitløk", "unit": null, "days": {{"Mandag": 3, "Tirsdag": 2}}}}
     ],
     "Kjøtt og fisk": [
-      {{"amount": 400, "unit": "g", "name": "kyllingfilet"}}
+      {{"name": "kyllingfilet", "unit": "g", "days": {{"Mandag": 400, "Fredag": 400}}}}
     ],
     "Meieri": [
-      {{"amount": 1, "unit": "dl", "name": "fløte"}}
+      {{"name": "fløte", "unit": "dl", "days": {{"Onsdag": 1}}}}
     ],
     "Tørrvarer": [
-      {{"amount": 1, "unit": "boks", "name": "hakkede tomater"}},
-      {{"amount": null, "unit": null, "name": "olivenolje"}}
+      {{"name": "hakkede tomater", "unit": "boks", "days": {{"Tirsdag": 1}}}},
+      {{"name": "olivenolje", "unit": null, "days": {{"Mandag": null, "Tirsdag": null}}}}
     ]
   }}
 }}"""

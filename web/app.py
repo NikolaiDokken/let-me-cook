@@ -36,8 +36,30 @@ def normalize_ingredients(lst):
             result.append(ing)
     return result
 
+def normalize_shopping_items(lst):
+    result = []
+    for item in lst:
+        if isinstance(item, str):
+            result.append({"name": item, "unit": None})
+        else:
+            result.append(item)
+    return result
+
+def fmt_shopping_ing(ing):
+    if 'days' not in ing:
+        return fmt_ing(ing)
+    vals = [v for v in ing['days'].values() if v is not None]
+    if not vals:
+        return ing['name']
+    total = sum(vals)
+    amt_str = str(int(total)) if total == int(total) else f"{float(total):.1f}"
+    if ing.get('unit'):
+        return f"{amt_str}{ing['unit']} {ing['name']}"
+    return f"{amt_str} {ing['name']}"
+
 app.jinja_env.filters['fmt_date'] = fmt_date
 app.jinja_env.filters['fmt_ing'] = fmt_ing
+app.jinja_env.filters['fmt_shopping_ing'] = fmt_shopping_ing
 
 
 def get_db():
@@ -94,15 +116,21 @@ def index():
 def shopping():
     con = get_db()
     week = con.execute(
-        "SELECT raw_json, week_start FROM weeks ORDER BY id DESC LIMIT 1"
+        "SELECT id, raw_json, week_start FROM weeks ORDER BY id DESC LIMIT 1"
     ).fetchone()
-    con.close()
     if not week:
-        return render_template("shopping.html", week=None, sections={}, base_people=None)
+        con.close()
+        return render_template("shopping.html", week=None, sections={}, base_people=None, days=[])
+    meals = con.execute(
+        "SELECT day FROM meals WHERE week_id = ? ORDER BY id",
+        (week["id"],)
+    ).fetchall()
+    con.close()
     plan = json.loads(week["raw_json"])
-    sections = {k: normalize_ingredients(v) for k, v in plan.get("shopping_list", {}).items()}
+    sections = {k: normalize_shopping_items(v) for k, v in plan.get("shopping_list", {}).items()}
     base_people = plan.get("base_people")
-    return render_template("shopping.html", week=week["week_start"], sections=sections, base_people=base_people)
+    days = [m["day"] for m in meals]
+    return render_template("shopping.html", week=week["week_start"], sections=sections, base_people=base_people, days=days)
 
 
 @app.route("/cook/<day>")
