@@ -77,7 +77,7 @@
 <div class="content">
   {% for week in weeks %}
   <a href="/history/{{ week.week_start }}" class="week-card">
-    <div class="week-badge">{{ 'DENNE UKEN' if loop.first else 'UKE' }}</div>
+    <div class="week-badge">{{ 'DENNE UKEN' if loop.first else 'UKE ' ~ (week.week_start | fmt_week_number) }}</div>
     <div class="week-info">
       <div class="week-date">{{ week.week_start | fmt_date }}</div>
       <div class="week-preview">{{ week.meals[:3] | join(' · ') }}{% if week.meals | length > 3 %} …{% endif %}</div>

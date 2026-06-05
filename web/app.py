@@ -18,6 +18,10 @@ def fmt_date(date_str):
     d = datetime.strptime(date_str, "%Y-%m-%d")
     return f"{d.day}. {_MONTHS_NO[d.month - 1]} {d.year}"
 
+def fmt_week_number(date_str):
+    d = datetime.strptime(date_str, "%Y-%m-%d")
+    return d.isocalendar()[1]
+
 def fmt_ing(ing):
     if ing.get('amount') is None:
         return ing['name']
@@ -58,6 +62,7 @@ def fmt_shopping_ing(ing):
     return f"{amt_str} {ing['name']}"
 
 app.jinja_env.filters['fmt_date'] = fmt_date
+app.jinja_env.filters['fmt_week_number'] = fmt_week_number
 app.jinja_env.filters['fmt_ing'] = fmt_ing
 app.jinja_env.filters['fmt_shopping_ing'] = fmt_shopping_ing
 
